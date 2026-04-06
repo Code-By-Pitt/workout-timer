@@ -1,4 +1,4 @@
-export type Phase = "workout" | "rest" | "idle";
+export type Phase = "workout" | "rest" | "section_rest" | "idle";
 
 export type TransitionSound = "beep" | "bell" | "chime" | "buzzer";
 
@@ -19,6 +19,7 @@ export interface Section {
   name: string;
   transitionSound: TransitionSound;
   rounds: Round[];
+  restBetweenSections: number;
 }
 
 export interface WorkoutConfig {
@@ -60,6 +61,7 @@ export function createDefaultSection(): Section {
     name: "",
     transitionSound: "beep",
     rounds: [createDefaultRound()],
+    restBetweenSections: 60,
   };
 }
 

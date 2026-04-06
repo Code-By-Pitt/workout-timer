@@ -87,6 +87,21 @@ function timerReducer(state: TimerState, action: TimerAction): TimerState {
         return advanceToNext(state);
       }
 
+      if (state.phase === "section_rest") {
+        // Section rest ended — advance to next section's first round
+        const nextSectionIndex = state.currentSectionIndex + 1;
+        const nextSection = state.config.sections[nextSectionIndex];
+        const nextRound = nextSection?.rounds[0];
+        if (!nextRound) return createInitialState(state.config);
+        return {
+          ...state,
+          phase: "workout",
+          secondsRemaining: nextRound.workoutSeconds,
+          currentSectionIndex: nextSectionIndex,
+          currentRoundIndex: 0,
+        };
+      }
+
       return state;
     }
 
@@ -112,6 +127,14 @@ function advanceToNext(state: TimerState): TimerState {
 
   // Next section?
   if (currentSectionIndex + 1 < config.sections.length) {
+    // Enter section rest if configured, otherwise jump straight to next section
+    if (section.restBetweenSections > 0) {
+      return {
+        ...state,
+        phase: "section_rest",
+        secondsRemaining: section.restBetweenSections,
+      };
+    }
     const nextSection = config.sections[currentSectionIndex + 1];
     const nextRound = nextSection.rounds[0];
     return {

@@ -3,10 +3,22 @@ import type { SavedWorkout, WorkoutConfig } from "../types/timer";
 
 const STORAGE_KEY = "workout-timer-workouts";
 
+function migrateConfig(config: WorkoutConfig): WorkoutConfig {
+  return {
+    ...config,
+    sections: config.sections.map((s) => ({
+      ...s,
+      restBetweenSections: s.restBetweenSections ?? 60,
+    })),
+  };
+}
+
 function loadAll(): SavedWorkout[] {
   try {
     const raw = localStorage.getItem(STORAGE_KEY);
-    return raw ? JSON.parse(raw) : [];
+    if (!raw) return [];
+    const parsed: SavedWorkout[] = JSON.parse(raw);
+    return parsed.map((w) => ({ ...w, config: migrateConfig(w.config) }));
   } catch {
     return [];
   }

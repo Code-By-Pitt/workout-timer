@@ -1,6 +1,7 @@
 import type { Section, Round, TransitionSound } from "../types/timer";
 import { TRANSITION_SOUNDS, createDefaultRound } from "../types/timer";
 import { RoundEditor } from "./RoundEditor";
+import { DurationStepper } from "./DurationStepper";
 import { playSound } from "../utils/playSound";
 
 interface SectionEditorProps {
@@ -96,6 +97,21 @@ export function SectionEditor({
             </button>
           ))}
         </div>
+      </div>
+
+      {/* Rest After Section */}
+      <div className="flex flex-col gap-2">
+        <label className="text-xs font-medium text-white/60">
+          Rest After Section
+        </label>
+        <DurationStepper
+          label=""
+          value={section.restBetweenSections}
+          onChange={(v) => onChange({ ...section, restBetweenSections: v })}
+          min={0}
+          max={300}
+          step={15}
+        />
       </div>
 
       {/* Rounds */}

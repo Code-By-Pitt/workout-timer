@@ -18,6 +18,7 @@ const COUNTDOWN_SECONDS = 10;
 const bgColor: Record<Phase, string> = {
   workout: "bg-emerald-600",
   rest: "bg-amber-500",
+  section_rest: "bg-blue-600",
   idle: "bg-slate-800",
 };
 
@@ -158,8 +159,18 @@ function App() {
         {headerName.toUpperCase()}
       </h1>
 
+      {/* Section rest — show upcoming section name */}
+      {state.phase === "section_rest" && (() => {
+        const nextSection = state.config.sections[state.currentSectionIndex + 1];
+        return nextSection?.name ? (
+          <p className="text-base font-medium opacity-70 sm:text-lg">
+            Up next: {nextSection.name}
+          </p>
+        ) : null;
+      })()}
+
       {/* Section name when running */}
-      {!isIdle && currentSection?.name && (
+      {!isIdle && state.phase !== "section_rest" && currentSection?.name && (
         <p className="text-base font-medium opacity-60 sm:text-lg">
           {currentSection.name}
           {totalSections > 1 && (
@@ -171,7 +182,7 @@ function App() {
       )}
 
       {/* Round label / exercise name */}
-      {!isIdle && currentRound?.label && (
+      {!isIdle && state.phase !== "section_rest" && currentRound?.label && (
         <p className="text-2xl font-bold sm:text-3xl">{currentRound.label}</p>
       )}
 
