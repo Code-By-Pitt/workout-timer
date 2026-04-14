@@ -1,7 +1,16 @@
 import { useSpotify } from "../hooks/useSpotify";
 
-export function SpotifyConnectButton() {
+interface SpotifyConnectButtonProps {
+  onBeforeConnect?: () => void;
+}
+
+export function SpotifyConnectButton({ onBeforeConnect }: SpotifyConnectButtonProps = {}) {
   const { loggedIn, user, loading, connect, logout } = useSpotify();
+
+  function handleConnect() {
+    onBeforeConnect?.();
+    connect();
+  }
 
   if (loading) {
     return (
@@ -34,7 +43,7 @@ export function SpotifyConnectButton() {
 
   return (
     <button
-      onClick={connect}
+      onClick={handleConnect}
       className="flex items-center justify-center gap-2 rounded-xl bg-emerald-600 px-4 py-2.5 text-sm font-semibold text-white hover:bg-emerald-700"
     >
       <span>🎵</span> Connect Spotify

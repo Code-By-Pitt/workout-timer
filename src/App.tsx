@@ -11,6 +11,7 @@ import { playSound, preloadSound } from "./utils/playSound";
 import { parseSpotifyLink } from "./utils/spotify";
 import { useSpotify } from "./hooks/useSpotify";
 import * as spotifyApi from "./utils/spotifyApi";
+import { takeOAuthReturnState } from "./utils/oauthReturnState";
 import type { Phase, WorkoutConfig, SavedWorkout } from "./types/timer";
 import { TRANSITION_SOUNDS, createDefaultWorkout } from "./types/timer";
 
@@ -35,9 +36,16 @@ function App() {
   const audioPrewarmed = useRef(false);
   const [toast, setToast] = useState<string | null>(null);
 
-  const [view, setView] = useState<View>("library");
-  const [editingId, setEditingId] = useState<string | undefined>();
-  const [editorConfig, setEditorConfig] = useState<WorkoutConfig>(createDefaultWorkout);
+  // Restore editor state if the user just returned from Spotify OAuth.
+  // `takeOAuthReturnState` reads-and-clears in one call, so this only fires once.
+  const initialReturnState = useState(() => takeOAuthReturnState())[0];
+  const [view, setView] = useState<View>(initialReturnState ? "editor" : "library");
+  const [editingId, setEditingId] = useState<string | undefined>(
+    initialReturnState?.editingId
+  );
+  const [editorConfig, setEditorConfig] = useState<WorkoutConfig>(
+    () => initialReturnState?.editorConfig ?? createDefaultWorkout()
+  );
 
   useWakeLock(state.isRunning);
 

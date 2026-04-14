@@ -6,6 +6,7 @@ import { parseSpotifyLink } from "../utils/spotify";
 import { SpotifyConnectButton } from "./SpotifyConnectButton";
 import { SpotifyPlaylistPicker } from "./SpotifyPlaylistPicker";
 import { useSpotify } from "../hooks/useSpotify";
+import { saveOAuthReturnState } from "../utils/oauthReturnState";
 
 interface TimerConfigProps {
   config: WorkoutConfig;
@@ -96,7 +97,11 @@ export function TimerConfig({
           <label className="text-xs font-medium text-white/60">
             Music (optional)
           </label>
-          <SpotifyConnectButton />
+          <SpotifyConnectButton
+            onBeforeConnect={() =>
+              saveOAuthReturnState({ editorConfig: workout, editingId })
+            }
+          />
 
           {/* Picked playlist card */}
           {canPickPlaylist && workout.spotifyPlaylist && (
