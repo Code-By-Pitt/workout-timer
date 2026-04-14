@@ -8,6 +8,7 @@ import { TimerConfig } from "./components/TimerConfig";
 import { RepetitionCounter } from "./components/RepetitionCounter";
 import { WorkoutLibrary } from "./components/WorkoutLibrary";
 import { playSound, preloadSound } from "./utils/playSound";
+import { parseSpotifyLink } from "./utils/spotify";
 import type { Phase, WorkoutConfig, SavedWorkout } from "./types/timer";
 import { TRANSITION_SOUNDS, createDefaultWorkout } from "./types/timer";
 
@@ -55,6 +56,13 @@ function App() {
 
   function handleStart() {
     prewarmAudio();
+    // Open Spotify only on the first start (idle → workout), not on resume
+    if (state.phase === "idle" && state.config.spotifyUrl) {
+      const link = parseSpotifyLink(state.config.spotifyUrl);
+      if (link) {
+        window.open(link.webUrl, "_blank", "noopener,noreferrer");
+      }
+    }
     start();
   }
 

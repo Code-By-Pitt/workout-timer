@@ -2,6 +2,7 @@ import { useState } from "react";
 import type { WorkoutConfig, Section } from "../types/timer";
 import { createDefaultSection } from "../types/timer";
 import { SectionEditor } from "./SectionEditor";
+import { parseSpotifyLink } from "../utils/spotify";
 
 interface TimerConfigProps {
   config: WorkoutConfig;
@@ -74,6 +75,39 @@ export function TimerConfig({
           placeholder="Workout name (e.g. Upper Body)"
           className="rounded-xl bg-white/10 px-4 py-3 text-white placeholder-white/30 outline-none focus:ring-2 focus:ring-white/40"
         />
+
+        {/* Spotify URL */}
+        <div className="flex flex-col gap-1.5">
+          <label className="text-xs font-medium text-white/60">
+            Music (optional)
+          </label>
+          <input
+            type="text"
+            value={workout.spotifyUrl ?? ""}
+            onChange={(e) =>
+              setWorkout({ ...workout, spotifyUrl: e.target.value })
+            }
+            placeholder="Paste Spotify link (playlist, album, track)"
+            className="rounded-xl bg-white/10 px-4 py-3 text-white placeholder-white/30 outline-none focus:ring-2 focus:ring-white/40"
+            autoCapitalize="none"
+            autoCorrect="off"
+          />
+          {(() => {
+            const value = workout.spotifyUrl?.trim() ?? "";
+            if (!value) return null;
+            const parsed = parseSpotifyLink(value);
+            if (parsed) {
+              return (
+                <p className="text-xs text-emerald-400">
+                  ✓ Ready — opens when you start the workout
+                </p>
+              );
+            }
+            return (
+              <p className="text-xs text-red-400">Not a valid Spotify link</p>
+            );
+          })()}
+        </div>
 
         {/* Sections */}
         <div className="flex max-h-[50vh] flex-col gap-4 overflow-y-auto pr-1">
