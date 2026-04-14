@@ -22,7 +22,12 @@ const STORAGE_KEYS = {
 } as const;
 
 function getRedirectUri(): string {
-  return `${window.location.origin}/callback`;
+  // Spotify no longer allows http://localhost — normalize to 127.0.0.1
+  // (loopback addresses are explicitly allowed over HTTP).
+  let origin = window.location.origin;
+  origin = origin.replace("//localhost:", "//127.0.0.1:").replace("//localhost/", "//127.0.0.1/");
+  if (origin.endsWith("//localhost")) origin = origin.replace("//localhost", "//127.0.0.1");
+  return `${origin}/callback`;
 }
 
 // PKCE helpers using Web Crypto API
