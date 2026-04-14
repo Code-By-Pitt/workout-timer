@@ -9,6 +9,8 @@ import { RepetitionCounter } from "./components/RepetitionCounter";
 import { WorkoutLibrary } from "./components/WorkoutLibrary";
 import { playSound, preloadSound } from "./utils/playSound";
 import { parseSpotifyLink } from "./utils/spotify";
+import { useSpotify } from "./hooks/useSpotify";
+import * as spotifyApi from "./utils/spotifyApi";
 import type { Phase, WorkoutConfig, SavedWorkout } from "./types/timer";
 import { TRANSITION_SOUNDS, createDefaultWorkout } from "./types/timer";
 
@@ -29,7 +31,9 @@ function App() {
   const { state, start, pause, reset, restartSection, setConfig, phaseChanged, previousPhase } =
     useTimer();
   const { workouts, save, remove } = useWorkoutStorage();
+  const { loggedIn, isPremium } = useSpotify();
   const audioPrewarmed = useRef(false);
+  const [toast, setToast] = useState<string | null>(null);
 
   const [view, setView] = useState<View>("library");
   const [editingId, setEditingId] = useState<string | undefined>();
@@ -54,14 +58,44 @@ function App() {
     }
   }
 
-  function handleStart() {
-    prewarmAudio();
-    // Open Spotify only on the first start (idle → workout), not on resume
-    if (state.phase === "idle" && state.config.spotifyUrl) {
-      const link = parseSpotifyLink(state.config.spotifyUrl);
+  function showToast(message: string) {
+    setToast(message);
+    window.setTimeout(() => setToast(null), 4000);
+  }
+
+  async function openSpotifyForConfig(config: WorkoutConfig) {
+    // Prefer picked playlist via Connect API (Premium users)
+    if (config.spotifyPlaylist && loggedIn && isPremium) {
+      try {
+        const devices = await spotifyApi.getDevices();
+        const active = devices.find((d) => d.is_active) ?? devices[0];
+        if (!active) {
+          showToast("Open Spotify on a device to enable playback");
+        } else {
+          await spotifyApi.playPlaylist(
+            config.spotifyPlaylist.uri,
+            active.id
+          );
+        }
+      } catch {
+        showToast("Spotify playback failed — starting timer anyway");
+      }
+      return;
+    }
+    // Fallback: legacy pasted URL (free users or no playlist picked)
+    if (config.spotifyUrl) {
+      const link = parseSpotifyLink(config.spotifyUrl);
       if (link) {
         window.open(link.webUrl, "_blank", "noopener,noreferrer");
       }
+    }
+  }
+
+  async function handleStart() {
+    prewarmAudio();
+    // Only on first start (idle → workout), not on resume after pause
+    if (state.phase === "idle") {
+      await openSpotifyForConfig(state.config);
     }
     start();
   }
@@ -90,8 +124,9 @@ function App() {
     setConfig(config);
     setView("timer");
     // start() needs to fire after setConfig processes
-    setTimeout(() => {
+    setTimeout(async () => {
       prewarmAudio();
+      await openSpotifyForConfig(config);
       start();
     }, 0);
   }
@@ -223,6 +258,13 @@ function App() {
         >
           ← Back to Workouts
         </button>
+      )}
+
+      {/* Transient toast */}
+      {toast && (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 rounded-full bg-black/80 px-4 py-2 text-sm text-white shadow-lg">
+          {toast}
+        </div>
       )}
     </div>
   );

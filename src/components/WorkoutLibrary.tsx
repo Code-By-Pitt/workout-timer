@@ -54,8 +54,8 @@ export function WorkoutLibrary({ workouts, onSelect, onNew, onDelete }: WorkoutL
               </span>
               <span className="flex items-center gap-1.5 text-xs text-white/50">
                 {summarize(w.config)}
-                {w.config.spotifyUrl && (
-                  <span title="Has Spotify playlist" className="text-emerald-400">
+                {(w.config.spotifyPlaylist || w.config.spotifyUrl) && (
+                  <span title="Has Spotify music" className="text-emerald-400">
                     🎵
                   </span>
                 )}
