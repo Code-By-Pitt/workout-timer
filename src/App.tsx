@@ -91,13 +91,46 @@ function App() {
     }
   }
 
+  function isSpotifyControlled(config: WorkoutConfig) {
+    return Boolean(config.spotifyPlaylist) && loggedIn && isPremium;
+  }
+
   async function handleStart() {
     prewarmAudio();
-    // Only on first start (idle → workout), not on resume after pause
     if (state.phase === "idle") {
+      // First start: begin playback from the picked playlist
       await openSpotifyForConfig(state.config);
+    } else if (isSpotifyControlled(state.config)) {
+      // Resume existing playback without restarting the playlist
+      try {
+        await spotifyApi.resumePlayback();
+      } catch {
+        // ignore — don't block timer
+      }
     }
     start();
+  }
+
+  async function handlePause() {
+    pause();
+    if (isSpotifyControlled(state.config)) {
+      try {
+        await spotifyApi.pausePlayback();
+      } catch {
+        // ignore
+      }
+    }
+  }
+
+  async function handleReset() {
+    reset();
+    if (isSpotifyControlled(state.config)) {
+      try {
+        await spotifyApi.pausePlayback();
+      } catch {
+        // ignore
+      }
+    }
   }
 
   function handleNewWorkout() {
@@ -134,6 +167,9 @@ function App() {
   function handleResetToLibrary() {
     reset();
     setView("library");
+    if (isSpotifyControlled(state.config)) {
+      spotifyApi.pausePlayback().catch(() => {});
+    }
   }
 
   // Play sounds on phase transitions
@@ -145,6 +181,10 @@ function App() {
       playSound(transitionSoundPath);
     } else if (state.phase === "idle" && previousPhase !== "idle") {
       playSound(ALARM_SOUND);
+      // Workout complete — stop Spotify playback
+      if (isSpotifyControlled(state.config)) {
+        spotifyApi.pausePlayback().catch(() => {});
+      }
     }
   }, [state.phase, phaseChanged, previousPhase, transitionSoundPath]);
 
@@ -245,8 +285,8 @@ function App() {
         isRunning={state.isRunning}
         isIdle={isIdle}
         onStart={handleStart}
-        onPause={pause}
-        onReset={reset}
+        onPause={handlePause}
+        onReset={handleReset}
         onRestartSection={restartSection}
       />
 
