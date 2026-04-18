@@ -69,7 +69,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const signInWithSpotify = useCallback(async () => {
     await supabase.auth.signInWithOAuth({
       provider: "spotify",
-      options: { redirectTo: window.location.origin },
+      options: { redirectTo: window.location.origin, scopes: "user-read-email" },
     });
   }, []);
 
