@@ -2,7 +2,7 @@ import { useState } from "react";
 import { useAuth } from "../hooks/useAuth";
 
 export function AuthScreen() {
-  const { signUp, signIn, signInWithGoogle, signInWithSpotify } = useAuth();
+  const { signUp, signIn, signInWithGoogle, signInWithSpotify, resetPassword } = useAuth();
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -118,6 +118,28 @@ export function AuthScreen() {
                 ? "Sign Up"
                 : "Sign In"}
           </button>
+
+          {!isSignUp && (
+            <button
+              type="button"
+              onClick={async () => {
+                if (!email) {
+                  setError("Enter your email above, then click Forgot Password");
+                  return;
+                }
+                setError(null);
+                const err = await resetPassword(email);
+                if (err) {
+                  setError(err);
+                } else {
+                  setMessage("Password reset email sent — check your inbox");
+                }
+              }}
+              className="text-sm text-white/50 hover:text-white/80"
+            >
+              Forgot password?
+            </button>
+          )}
         </form>
 
         <p className="text-center text-sm text-white/50">

@@ -1,5 +1,6 @@
 import type { SavedWorkout, WorkoutConfig } from "../types/timer";
 import { formatTime } from "../utils/formatTime";
+import { useAuth } from "../hooks/useAuth";
 
 interface WorkoutLibraryProps {
   workouts: SavedWorkout[];
@@ -19,12 +20,23 @@ function summarize(config: WorkoutConfig): string {
 }
 
 export function WorkoutLibrary({ workouts, onSelect, onNew, onDelete }: WorkoutLibraryProps) {
+  const { user, signOut } = useAuth();
+
   return (
     <div className="flex min-h-dvh flex-col items-center bg-slate-800 px-4 py-10 text-white">
-      <h1 className="mb-2 text-2xl font-bold sm:text-3xl">My Workouts</h1>
-      <p className="mb-8 text-sm text-white/50">
-        Select a workout or create a new one
-      </p>
+      {/* Header with sign out */}
+      <div className="mb-6 flex w-full max-w-md items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold sm:text-3xl">My Workouts</h1>
+          <p className="text-xs text-white/40">{user?.email}</p>
+        </div>
+        <button
+          onClick={signOut}
+          className="rounded-lg px-3 py-1.5 text-sm text-white/50 hover:bg-white/10 hover:text-white/80"
+        >
+          Sign Out
+        </button>
+      </div>
 
       <div className="flex w-full max-w-md flex-col gap-3">
         <button

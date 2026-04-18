@@ -17,6 +17,7 @@ interface AuthContextValue {
   signIn: (email: string, password: string) => Promise<string | null>;
   signInWithGoogle: () => Promise<void>;
   signInWithSpotify: () => Promise<void>;
+  resetPassword: (email: string) => Promise<string | null>;
   signOut: () => Promise<void>;
 }
 
@@ -72,6 +73,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const resetPassword = useCallback(async (email: string) => {
+    const { error } = await supabase.auth.resetPasswordForEmail(email, {
+      redirectTo: `${window.location.origin}/`,
+    });
+    return error?.message ?? null;
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
   }, []);
@@ -86,6 +94,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signIn,
         signInWithGoogle,
         signInWithSpotify,
+        resetPassword,
         signOut,
       }}
     >
