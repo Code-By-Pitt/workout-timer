@@ -16,6 +16,7 @@ interface AuthContextValue {
   signUp: (email: string, password: string) => Promise<string | null>;
   signIn: (email: string, password: string) => Promise<string | null>;
   signInWithGoogle: () => Promise<void>;
+  signInWithSpotify: () => Promise<void>;
   signOut: () => Promise<void>;
 }
 
@@ -64,6 +65,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const signInWithSpotify = useCallback(async () => {
+    await supabase.auth.signInWithOAuth({
+      provider: "spotify",
+      options: { redirectTo: window.location.origin },
+    });
+  }, []);
+
   const signOut = useCallback(async () => {
     await supabase.auth.signOut();
   }, []);
@@ -77,6 +85,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         signUp,
         signIn,
         signInWithGoogle,
+        signInWithSpotify,
         signOut,
       }}
     >
