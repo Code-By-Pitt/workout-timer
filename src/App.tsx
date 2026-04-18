@@ -10,6 +10,8 @@ import { WorkoutLibrary } from "./components/WorkoutLibrary";
 import { playSound, preloadSound } from "./utils/playSound";
 import { parseSpotifyLink } from "./utils/spotify";
 import { useSpotify } from "./hooks/useSpotify";
+import { useAuth } from "./hooks/useAuth";
+import { AuthScreen } from "./components/AuthScreen";
 import * as spotifyApi from "./utils/spotifyApi";
 import { takeOAuthReturnState } from "./utils/oauthReturnState";
 import type { Phase, WorkoutConfig, SavedWorkout } from "./types/timer";
@@ -29,6 +31,7 @@ const bgColor: Record<Phase, string> = {
 type View = "library" | "editor" | "timer";
 
 function App() {
+  const { user, loading: authLoading } = useAuth();
   const { state, start, pause, reset, restartSection, setConfig, phaseChanged, previousPhase } =
     useTimer();
   const { workouts, save, remove } = useWorkoutStorage();
@@ -207,8 +210,18 @@ function App() {
     }
   }, [state.phase, state.isRunning, state.secondsRemaining]);
 
-  // When timer finishes (goes idle while in timer view), stay on timer view
-  // so the user sees the controls
+  // --- Auth Gate ---
+  if (authLoading) {
+    return (
+      <div className="flex min-h-dvh items-center justify-center bg-slate-800 text-white">
+        <p className="text-white/50">Loading...</p>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return <AuthScreen />;
+  }
 
   // --- Library View ---
   if (view === "library") {

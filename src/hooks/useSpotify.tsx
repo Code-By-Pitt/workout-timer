@@ -9,7 +9,7 @@ import {
 import {
   startLogin,
   logout as doLogout,
-  isLoggedIn as hasTokens,
+  isLoggedIn as checkLoggedIn,
 } from "../utils/spotifyAuth";
 import { getMe, type SpotifyUser } from "../utils/spotifyApi";
 
@@ -27,18 +27,18 @@ const SpotifyContext = createContext<SpotifyContextValue | null>(null);
 
 export function SpotifyProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SpotifyUser | null>(null);
-  const [loggedIn, setLoggedIn] = useState<boolean>(hasTokens());
-  const [loading, setLoading] = useState<boolean>(hasTokens());
+  const [loggedIn, setLoggedIn] = useState(false);
+  const [loading, setLoading] = useState(true);
 
   const refreshUser = useCallback(async () => {
-    if (!hasTokens()) {
-      setUser(null);
-      setLoggedIn(false);
-      setLoading(false);
-      return;
-    }
     setLoading(true);
     try {
+      const hasTokens = await checkLoggedIn();
+      if (!hasTokens) {
+        setUser(null);
+        setLoggedIn(false);
+        return;
+      }
       const me = await getMe();
       setUser(me);
       setLoggedIn(true);
@@ -58,8 +58,8 @@ export function SpotifyProvider({ children }: { children: ReactNode }) {
     startLogin();
   }, []);
 
-  const logout = useCallback(() => {
-    doLogout();
+  const logout = useCallback(async () => {
+    await doLogout();
     setUser(null);
     setLoggedIn(false);
   }, []);

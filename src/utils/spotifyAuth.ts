@@ -1,5 +1,8 @@
-// OAuth 2.0 Authorization Code + PKCE for Spotify
-// No backend — Client ID is public, PKCE protects the flow
+// Spotify OAuth 2.0 Authorization Code + PKCE
+// Tokens stored in Supabase spotify_tokens table (server-side)
+// Access token cached in memory only (no localStorage — XSS-safe)
+
+import { supabase } from "../lib/supabase";
 
 const CLIENT_ID = import.meta.env.VITE_SPOTIFY_CLIENT_ID as string;
 const AUTH_URL = "https://accounts.spotify.com/authorize";
@@ -14,23 +17,21 @@ const SCOPES = [
   "user-modify-playback-state",
 ].join(" ");
 
-const STORAGE_KEYS = {
-  accessToken: "spotify.access_token",
-  refreshToken: "spotify.refresh_token",
-  expiresAt: "spotify.expires_at",
-  codeVerifier: "spotify.code_verifier",
-} as const;
+// In-memory cache only — never written to localStorage
+let cachedAccessToken: string | null = null;
+let cachedExpiresAt = 0;
 
 function getRedirectUri(): string {
-  // Spotify no longer allows http://localhost — normalize to 127.0.0.1
-  // (loopback addresses are explicitly allowed over HTTP).
   let origin = window.location.origin;
-  origin = origin.replace("//localhost:", "//127.0.0.1:").replace("//localhost/", "//127.0.0.1/");
-  if (origin.endsWith("//localhost")) origin = origin.replace("//localhost", "//127.0.0.1");
+  origin = origin
+    .replace("//localhost:", "//127.0.0.1:")
+    .replace("//localhost/", "//127.0.0.1/");
+  if (origin.endsWith("//localhost"))
+    origin = origin.replace("//localhost", "//127.0.0.1");
   return `${origin}/callback`;
 }
 
-// PKCE helpers using Web Crypto API
+// PKCE helpers
 function randomString(length: number): string {
   const chars =
     "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-._~";
@@ -54,7 +55,8 @@ function base64UrlEncode(bytes: Uint8Array): string {
 export async function startLogin(): Promise<void> {
   const verifier = randomString(64);
   const challenge = await sha256Base64Url(verifier);
-  localStorage.setItem(STORAGE_KEYS.codeVerifier, verifier);
+  // Code verifier is short-lived and must survive the redirect — sessionStorage is acceptable here
+  sessionStorage.setItem("spotify.code_verifier", verifier);
 
   const params = new URLSearchParams({
     client_id: CLIENT_ID,
@@ -69,7 +71,7 @@ export async function startLogin(): Promise<void> {
 }
 
 export async function handleCallback(code: string): Promise<void> {
-  const verifier = localStorage.getItem(STORAGE_KEYS.codeVerifier);
+  const verifier = sessionStorage.getItem("spotify.code_verifier");
   if (!verifier) throw new Error("Missing code verifier");
 
   const body = new URLSearchParams({
@@ -97,54 +99,113 @@ export async function handleCallback(code: string): Promise<void> {
     expires_in: number;
   } = await res.json();
 
-  storeTokens(data.access_token, data.refresh_token, data.expires_in);
-  localStorage.removeItem(STORAGE_KEYS.codeVerifier);
+  await storeTokens(data.access_token, data.refresh_token, data.expires_in);
+  sessionStorage.removeItem("spotify.code_verifier");
 }
 
-function storeTokens(accessToken: string, refreshToken: string, expiresIn: number) {
-  localStorage.setItem(STORAGE_KEYS.accessToken, accessToken);
-  localStorage.setItem(STORAGE_KEYS.refreshToken, refreshToken);
-  localStorage.setItem(
-    STORAGE_KEYS.expiresAt,
-    String(Date.now() + expiresIn * 1000)
+async function storeTokens(
+  accessToken: string,
+  refreshToken: string,
+  expiresIn: number
+) {
+  const expiresAt = Date.now() + expiresIn * 1000;
+
+  // Cache in memory
+  cachedAccessToken = accessToken;
+  cachedExpiresAt = expiresAt;
+
+  // Persist refresh token + access token in Supabase
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return;
+
+  await supabase.from("spotify_tokens").upsert(
+    {
+      user_id: user.id,
+      access_token: accessToken,
+      refresh_token: refreshToken,
+      expires_at: expiresAt,
+      updated_at: new Date().toISOString(),
+    },
+    { onConflict: "user_id" }
   );
 }
 
-export function isLoggedIn(): boolean {
-  return Boolean(
-    localStorage.getItem(STORAGE_KEYS.accessToken) &&
-      localStorage.getItem(STORAGE_KEYS.refreshToken)
-  );
+export async function isLoggedIn(): Promise<boolean> {
+  if (cachedAccessToken) return true;
+  // Check Supabase for stored tokens
+  const tokens = await loadTokensFromSupabase();
+  return tokens !== null;
 }
 
-export function logout() {
-  localStorage.removeItem(STORAGE_KEYS.accessToken);
-  localStorage.removeItem(STORAGE_KEYS.refreshToken);
-  localStorage.removeItem(STORAGE_KEYS.expiresAt);
+export async function logout() {
+  cachedAccessToken = null;
+  cachedExpiresAt = 0;
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user) {
+    await supabase.from("spotify_tokens").delete().eq("user_id", user.id);
+  }
+
+  // Clean up any legacy localStorage tokens
+  localStorage.removeItem("spotify.access_token");
+  localStorage.removeItem("spotify.refresh_token");
+  localStorage.removeItem("spotify.expires_at");
 }
 
-let refreshPromise: Promise<string> | null = null;
+let refreshPromise: Promise<string | null> | null = null;
 
 export async function getAccessToken(): Promise<string | null> {
-  const token = localStorage.getItem(STORAGE_KEYS.accessToken);
-  const expiresAt = Number(localStorage.getItem(STORAGE_KEYS.expiresAt) ?? 0);
-  // Refresh if expired or expiring in the next 30s
-  if (token && Date.now() < expiresAt - 30_000) {
-    return token;
+  // Return cached token if still valid
+  if (cachedAccessToken && Date.now() < cachedExpiresAt - 30_000) {
+    return cachedAccessToken;
   }
-  const refreshToken = localStorage.getItem(STORAGE_KEYS.refreshToken);
-  if (!refreshToken) return null;
 
-  // Share in-flight refresh
+  // Try loading from Supabase
+  const tokens = await loadTokensFromSupabase();
+  if (!tokens) return null;
+
+  // If the stored access token is still valid, cache and return
+  if (Date.now() < tokens.expires_at - 30_000) {
+    cachedAccessToken = tokens.access_token;
+    cachedExpiresAt = tokens.expires_at;
+    return tokens.access_token;
+  }
+
+  // Refresh needed
   if (!refreshPromise) {
-    refreshPromise = refreshAccessToken(refreshToken).finally(() => {
+    refreshPromise = refreshAccessToken(tokens.refresh_token).finally(() => {
       refreshPromise = null;
     });
   }
   return refreshPromise;
 }
 
-async function refreshAccessToken(refreshToken: string): Promise<string> {
+async function loadTokensFromSupabase(): Promise<{
+  access_token: string;
+  refresh_token: string;
+  expires_at: number;
+} | null> {
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (!user) return null;
+
+  const { data } = await supabase
+    .from("spotify_tokens")
+    .select("access_token, refresh_token, expires_at")
+    .eq("user_id", user.id)
+    .single();
+
+  return data ?? null;
+}
+
+async function refreshAccessToken(
+  refreshToken: string
+): Promise<string | null> {
   const body = new URLSearchParams({
     client_id: CLIENT_ID,
     grant_type: "refresh_token",
@@ -156,16 +217,16 @@ async function refreshAccessToken(refreshToken: string): Promise<string> {
     body,
   });
   if (!res.ok) {
-    // Refresh token invalid — force re-login
-    logout();
-    throw new Error("Refresh token invalid");
+    await logout();
+    return null;
   }
   const data: {
     access_token: string;
     refresh_token?: string;
     expires_in: number;
   } = await res.json();
-  storeTokens(
+
+  await storeTokens(
     data.access_token,
     data.refresh_token ?? refreshToken,
     data.expires_in
