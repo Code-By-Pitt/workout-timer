@@ -12,6 +12,12 @@ dist
 dist-ssr
 *.local
 
+# Playwright research artifacts (kept locally, not committed)
+.playwright-mcp/
+/timer-plus.png
+/dreamspark-interval-timer.png
+/interval-timer-deltaworks.png
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json

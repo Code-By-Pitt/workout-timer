@@ -2,7 +2,33 @@
 
 ## Research Summary
 
-Analysis of Timer Plus, Interval Timer (DreamSpark), Interval Timer (Deltaworks), Seconds Pro, and top-rated HIIT timer apps on Dribbble reveals consistent UX patterns that our app should adopt.
+Analysis of Timer Plus, Interval Timer (DreamSpark), Interval Timer (Deltaworks), Seconds Pro, and top-rated HIIT timer apps on Dribbble — including direct visual review of their App Store / Play Store screenshots via Playwright — reveals consistent UX patterns that our app should adopt.
+
+### Visual evidence from competitor screenshots
+
+**Timer Plus (App Store hero is landscape mode):**
+- Landscape is featured as the PRIMARY use case — phone propped sideways on a bench
+- Vertically rotated "WORK" label down the left edge
+- Timer digits occupy ~70% of screen height
+- "UP NEXT: REST 00:10" preview pinned to the right edge
+- "ROUNDS LEFT: 2", "CYCLES LEFT: 3" in bottom corners
+- Three distinct phases with three colors: PREPARE (yellow), WORK (lime green), REST (red)
+- Stop/pause controls are small and monochrome — they get out of the way
+
+**Interval Timer (DreamSpark) — extreme minimalism:**
+- Three full-color screens: yellow (rest/prep), green (work), blue (rest after)
+- Just four elements visible: time, phase label, round number, single icon
+- No progress ring, no controls, no "next up" — color IS the entire UX
+- Most-requested feature in reviews: "preview of the next exercise" (validates our NextUp bar)
+
+**Interval Timer (Deltaworks):**
+- **Exercise name at top** ("Squat press") in large bold text
+- **Dual-time display**: huge current countdown + small elapsed/total at the sides
+- Music-player controls: previous-round / play-pause / next-round
+- Skip-back/skip-forward let users jump rounds without resetting
+- Per-section color theming (different colors for different sections)
+
+### Patterns confirmed across all three apps
 
 ### Key patterns from top apps:
 1. **Full-screen color coding** is the #1 UX differentiator — the ENTIRE screen changes color per phase. Users recognize their state from across a gym without reading text.
@@ -330,6 +356,35 @@ interface NextUpBarProps {
 ### Phase 4 (stretch)
 11. **Landscape mode** (web + mobile)
 12. **Workout summary** before starting
+13. **Skip-round controls** (previous/next round buttons during active timer, like Deltaworks)
+14. **Dual-time display** (small "elapsed | total" strip alongside the main countdown)
+15. **PREPARE phase** before the first work interval — 5-10s "Get Ready" countdown so the user isn't caught mid-fumble when WORK starts (Timer Plus has this)
+
+---
+
+## New Insights from Screenshots
+
+### Add a PREPARE phase
+Timer Plus has a yellow "PREPARE" phase that runs for ~5 seconds before the first WORK interval. This is a small but noticeable UX win: the user starts the timer, sees a 5-second countdown, gets into position, and then WORK begins — instead of needing to rush to position the moment they hit Start. Easy to add: extend the Phase type, add a `prepareSeconds` field to WorkoutConfig (default 5, configurable, can be disabled by setting to 0).
+
+### Hero use case is landscape
+Timer Plus features landscape mode as their FIRST screenshot for a reason — instructors prop their phone on a bench and walk away from it. Our portrait-only design forces them to keep the phone vertical, which is awkward. Landscape mode should be a Phase 4 priority, not a stretch goal — it's a real differentiator.
+
+### Skip-round controls
+Deltaworks has previous/next round buttons that let the instructor skip a round mid-workout (e.g., a participant arrives late, or someone needs to skip a difficult exercise). Our Restart Section is helpful but coarse-grained. Add `nextRound()` and `previousRound()` to the timer reducer — small change, high utility.
+
+### Phase color recommendations (refined)
+Based on what tests well across the three apps:
+
+| Phase | Background | Why |
+|---|---|---|
+| PREPARE | `#eab308` (yellow-500) | Universally yellow = "get ready" |
+| WORK | `#10b981` (emerald-500) | Slightly brighter than current emerald-600 — Timer Plus uses near-fluorescent lime |
+| REST | `#dc2626` (red-600) | Red signals "stop / recovery" — Timer Plus uses red, DreamSpark uses blue. Red is more universally read as "stop" |
+| SECTION REST | `#2563eb` (blue-600) | Blue distinguishes section breaks from round rests |
+| IDLE | `#1e293b` (slate-800) | Dark neutral for setup/between |
+
+(Current app uses amber-500 for REST — consider switching to red-600 for stronger contrast and faster recognition.)
 
 ---
 
