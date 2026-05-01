@@ -11,6 +11,7 @@ import { ProgressRing } from "./components/ProgressRing";
 import { NextUpBar } from "./components/NextUpBar";
 import { computeWorkoutProgress } from "./utils/workoutProgress";
 import { formatTime } from "./utils/formatTime";
+import { useViewport } from "./hooks/useViewport";
 import { playSound, preloadSound } from "./utils/playSound";
 import { parseSpotifyLink } from "./utils/spotify";
 import { useSpotify } from "./hooks/useSpotify";
@@ -306,25 +307,31 @@ function App() {
   // Overall workout progress (elapsed + remaining)
   const progressInWorkout = computeWorkoutProgress(state);
 
-  return (
-    <div
-      className={`flex min-h-dvh flex-col items-center justify-center gap-6 px-4 text-white transition-colors duration-500 ${bgColor[state.phase]}`}
-    >
-      <h1 className="text-lg font-semibold tracking-wider opacity-70 sm:text-xl">
-        {headerName.toUpperCase()}
-      </h1>
+  // Responsive ring size — fit the viewport differently in portrait vs landscape
+  const viewport = useViewport();
+  const ringSize = viewport.isLandscape
+    ? Math.min(viewport.height * 0.78, viewport.width * 0.42)
+    : Math.min(360, viewport.width * 0.78);
 
-      {/* Section rest — show upcoming section name */}
-      {state.phase === "section_rest" && (() => {
-        const nextSection = state.config.sections[state.currentSectionIndex + 1];
-        return nextSection?.name ? (
-          <p className="text-base font-medium opacity-70 sm:text-lg">
-            Up next: {nextSection.name}
-          </p>
-        ) : null;
-      })()}
+  const sectionRestNextName = (() => {
+    if (state.phase !== "section_rest") return null;
+    const nextSection = state.config.sections[state.currentSectionIndex + 1];
+    return nextSection?.name ?? null;
+  })();
 
-      {/* Section name when running */}
+  const Header = (
+    <h1 className="text-lg font-semibold tracking-wider opacity-70 sm:text-xl">
+      {headerName.toUpperCase()}
+    </h1>
+  );
+
+  const Labels = (
+    <>
+      {sectionRestNextName && (
+        <p className="text-base font-medium opacity-70 sm:text-lg">
+          Up next: {sectionRestNextName}
+        </p>
+      )}
       {!isIdle && state.phase !== "section_rest" && currentSection?.name && (
         <p className="text-base font-medium opacity-60 sm:text-lg">
           {currentSection.name}
@@ -335,60 +342,99 @@ function App() {
           )}
         </p>
       )}
-
-      {/* Round label / exercise name */}
       {!isIdle && state.phase !== "section_rest" && currentRound?.label && (
         <p className="text-2xl font-bold sm:text-3xl">{currentRound.label}</p>
       )}
+    </>
+  );
 
-      <ProgressRing
-        progress={progress}
-        size={Math.min(360, Math.max(280, 320))}
-        strokeWidth={12}
-        activeColorClass={ringColorClass[state.phase]}
-      >
-        <TimerDisplay
-          secondsRemaining={state.secondsRemaining}
-          phase={state.phase}
-          pulse={shouldPulse}
-        />
-      </ProgressRing>
-
-      {!isIdle && (
-        <RepetitionCounter
-          currentRound={state.currentRoundIndex + 1}
-          totalRounds={totalRoundsInSection}
-        />
-      )}
-
-      {!isIdle && progressInWorkout && (
-        <p className="text-xs font-medium tabular-nums text-white/60">
-          Elapsed {formatTime(progressInWorkout.elapsedSeconds)} · Remaining{" "}
-          {formatTime(progressInWorkout.remainingSeconds)}
-        </p>
-      )}
-
-      {!isIdle && <NextUpBar state={state} />}
-
-      <TimerControls
-        isRunning={state.isRunning}
-        isIdle={isIdle}
-        onStart={handleStart}
-        onPause={handlePause}
-        onReset={handleReset}
-        onRestartSection={restartSection}
-        onPreviousRound={previousRound}
-        onNextRound={nextRound}
+  const RingSlot = (
+    <ProgressRing
+      progress={progress}
+      size={ringSize}
+      strokeWidth={12}
+      activeColorClass={ringColorClass[state.phase]}
+    >
+      <TimerDisplay
+        secondsRemaining={state.secondsRemaining}
+        phase={state.phase}
+        pulse={shouldPulse}
       />
+    </ProgressRing>
+  );
 
-      {/* Back to library when idle */}
-      {isIdle && (
-        <button
-          onClick={handleResetToLibrary}
-          className="mt-4 text-sm text-white/50 hover:text-white/80"
-        >
-          ← Back to Workouts
-        </button>
+  const Counter = !isIdle && (
+    <RepetitionCounter
+      currentRound={state.currentRoundIndex + 1}
+      totalRounds={totalRoundsInSection}
+    />
+  );
+
+  const DualTime = !isIdle && progressInWorkout && (
+    <p className="text-xs font-medium tabular-nums text-white/60">
+      Elapsed {formatTime(progressInWorkout.elapsedSeconds)} · Remaining{" "}
+      {formatTime(progressInWorkout.remainingSeconds)}
+    </p>
+  );
+
+  const NextUp = !isIdle && <NextUpBar state={state} />;
+
+  const Controls = (
+    <TimerControls
+      isRunning={state.isRunning}
+      isIdle={isIdle}
+      onStart={handleStart}
+      onPause={handlePause}
+      onReset={handleReset}
+      onRestartSection={restartSection}
+      onPreviousRound={previousRound}
+      onNextRound={nextRound}
+    />
+  );
+
+  const BackLink = isIdle && (
+    <button
+      onClick={handleResetToLibrary}
+      className="mt-4 text-sm text-white/50 hover:text-white/80"
+    >
+      ← Back to Workouts
+    </button>
+  );
+
+  return (
+    <div
+      className={`flex min-h-dvh w-full text-white transition-colors duration-500 ${bgColor[state.phase]} ${
+        viewport.isLandscape
+          ? "flex-row items-center justify-around gap-6 px-6 py-4"
+          : "flex-col items-center justify-center gap-6 px-4 py-4"
+      }`}
+    >
+      {viewport.isLandscape ? (
+        <>
+          <div className="flex shrink-0 items-center justify-center">
+            {RingSlot}
+          </div>
+          <div className="flex max-w-sm flex-1 flex-col items-center gap-3 overflow-y-auto">
+            {Header}
+            {Labels}
+            {Counter}
+            {DualTime}
+            {NextUp}
+            {Controls}
+            {BackLink}
+          </div>
+        </>
+      ) : (
+        <>
+          {Header}
+          {Labels}
+          {RingSlot}
+          {Counter}
+          {DualTime}
+          {NextUp}
+          {Controls}
+          {BackLink}
+        </>
       )}
 
       {/* Transient toast */}
