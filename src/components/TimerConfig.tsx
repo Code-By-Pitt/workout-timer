@@ -92,6 +92,35 @@ export function TimerConfig({
           className="rounded-xl bg-white/10 px-4 py-3 text-white placeholder-white/30 outline-none focus:ring-2 focus:ring-white/40"
         />
 
+        {/* Prep time */}
+        <div className="flex items-center justify-between rounded-xl bg-white/10 px-4 py-3">
+          <div className="flex flex-col">
+            <span className="text-xs font-medium text-white/60">Prep time</span>
+            <span className="text-[10px] text-white/40">
+              Yellow countdown before workout starts
+            </span>
+          </div>
+          <div className="flex items-center gap-1.5">
+            {[0, 5, 10, 15, 20, 30].map((s) => {
+              const current = workout.prepareSeconds ?? 5;
+              const active = current === s;
+              return (
+                <button
+                  key={s}
+                  onClick={() => setWorkout({ ...workout, prepareSeconds: s })}
+                  className={`min-w-[2rem] rounded-md px-1.5 py-1 text-xs font-medium ${
+                    active
+                      ? "bg-white text-slate-800"
+                      : "bg-white/10 text-white/70 hover:bg-white/20"
+                  }`}
+                >
+                  {s === 0 ? "Off" : `${s}s`}
+                </button>
+              );
+            })}
+          </div>
+        </div>
+
         {/* Music / Spotify */}
         <div className="flex flex-col gap-2">
           <label className="text-xs font-medium text-white/60">

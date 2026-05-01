@@ -24,6 +24,7 @@ const CLAP_SOUND = "/sounds/clap.wav";
 const COUNTDOWN_SECONDS = 10;
 
 const bgColor: Record<Phase, string> = {
+  prepare: "bg-yellow-500",
   workout: "bg-emerald-600",
   rest: "bg-red-600",
   section_rest: "bg-blue-600",
@@ -262,6 +263,8 @@ function App() {
   if (state.phase === "rest") phaseDuration = currentRound?.restSeconds ?? 0;
   else if (state.phase === "section_rest")
     phaseDuration = currentSection?.restBetweenSections ?? 0;
+  else if (state.phase === "prepare")
+    phaseDuration = state.config.prepareSeconds ?? 5;
   const progress =
     phaseDuration > 0
       ? Math.max(0, Math.min(1, 1 - state.secondsRemaining / phaseDuration))
@@ -269,15 +272,16 @@ function App() {
 
   // Active arc color per phase
   const ringColorClass: Record<Phase, string> = {
+    prepare: "stroke-yellow-100",
     workout: "stroke-emerald-200",
     rest: "stroke-red-200",
     section_rest: "stroke-blue-200",
     idle: "stroke-white/40",
   };
 
-  // Pulse digits in the final 5 seconds of work
+  // Pulse digits in the final 5 seconds of work or prepare
   const shouldPulse =
-    state.phase === "workout" &&
+    (state.phase === "workout" || state.phase === "prepare") &&
     state.isRunning &&
     state.secondsRemaining <= 5 &&
     state.secondsRemaining > 0;

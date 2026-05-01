@@ -9,6 +9,7 @@ interface TimerDisplayProps {
 }
 
 const phaseLabel: Record<Phase, string> = {
+  prepare: "GET READY",
   workout: "WORK",
   rest: "REST",
   section_rest: "SECTION REST",
