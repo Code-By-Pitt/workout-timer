@@ -9,6 +9,8 @@ import { RepetitionCounter } from "./components/RepetitionCounter";
 import { WorkoutLibrary } from "./components/WorkoutLibrary";
 import { ProgressRing } from "./components/ProgressRing";
 import { NextUpBar } from "./components/NextUpBar";
+import { computeWorkoutProgress } from "./utils/workoutProgress";
+import { formatTime } from "./utils/formatTime";
 import { playSound, preloadSound } from "./utils/playSound";
 import { parseSpotifyLink } from "./utils/spotify";
 import { useSpotify } from "./hooks/useSpotify";
@@ -35,8 +37,18 @@ type View = "library" | "editor" | "timer";
 
 function App() {
   const { user, loading: authLoading } = useAuth();
-  const { state, start, pause, reset, restartSection, setConfig, phaseChanged, previousPhase } =
-    useTimer();
+  const {
+    state,
+    start,
+    pause,
+    reset,
+    restartSection,
+    nextRound,
+    previousRound,
+    setConfig,
+    phaseChanged,
+    previousPhase,
+  } = useTimer();
   const { workouts, save, remove } = useWorkoutStorage();
   const { loggedIn, isPremium } = useSpotify();
   const audioPrewarmed = useRef(false);
@@ -291,6 +303,9 @@ function App() {
     state.secondsRemaining <= 5 &&
     state.secondsRemaining > 0;
 
+  // Overall workout progress (elapsed + remaining)
+  const progressInWorkout = computeWorkoutProgress(state);
+
   return (
     <div
       className={`flex min-h-dvh flex-col items-center justify-center gap-6 px-4 text-white transition-colors duration-500 ${bgColor[state.phase]}`}
@@ -346,6 +361,13 @@ function App() {
         />
       )}
 
+      {!isIdle && progressInWorkout && (
+        <p className="text-xs font-medium tabular-nums text-white/60">
+          Elapsed {formatTime(progressInWorkout.elapsedSeconds)} · Remaining{" "}
+          {formatTime(progressInWorkout.remainingSeconds)}
+        </p>
+      )}
+
       {!isIdle && <NextUpBar state={state} />}
 
       <TimerControls
@@ -355,6 +377,8 @@ function App() {
         onPause={handlePause}
         onReset={handleReset}
         onRestartSection={restartSection}
+        onPreviousRound={previousRound}
+        onNextRound={nextRound}
       />
 
       {/* Back to library when idle */}
