@@ -4,6 +4,8 @@ import { formatTime } from "../utils/formatTime";
 interface TimerDisplayProps {
   secondsRemaining: number;
   phase: Phase;
+  /** When true, digits gently pulse (final 5 seconds of work) */
+  pulse?: boolean;
 }
 
 const phaseLabel: Record<Phase, string> = {
@@ -13,17 +15,25 @@ const phaseLabel: Record<Phase, string> = {
   idle: "READY",
 };
 
-export function TimerDisplay({ secondsRemaining, phase }: TimerDisplayProps) {
+export function TimerDisplay({
+  secondsRemaining,
+  phase,
+  pulse = false,
+}: TimerDisplayProps) {
   return (
-    <div className="flex flex-col items-center gap-2">
+    <div className="flex flex-col items-center gap-1">
       <p
-        className="text-2xl font-bold uppercase tracking-widest opacity-80 sm:text-3xl"
+        className="text-xl font-bold uppercase tracking-widest opacity-80 sm:text-2xl"
         aria-live="assertive"
       >
         {phaseLabel[phase]}
       </p>
       <p
-        className="font-mono text-[22vw] font-bold leading-none tabular-nums sm:text-[18vw] md:text-9xl"
+        className={
+          "font-mono font-bold leading-none tabular-nums " +
+          "text-[clamp(4rem,18vw,9rem)] " +
+          (pulse ? "animate-timer-pulse" : "")
+        }
         aria-label={`${secondsRemaining} seconds remaining, ${phase} phase`}
       >
         {formatTime(secondsRemaining)}

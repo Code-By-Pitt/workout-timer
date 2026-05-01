@@ -7,6 +7,8 @@ import { TimerControls } from "./components/TimerControls";
 import { TimerConfig } from "./components/TimerConfig";
 import { RepetitionCounter } from "./components/RepetitionCounter";
 import { WorkoutLibrary } from "./components/WorkoutLibrary";
+import { ProgressRing } from "./components/ProgressRing";
+import { NextUpBar } from "./components/NextUpBar";
 import { playSound, preloadSound } from "./utils/playSound";
 import { parseSpotifyLink } from "./utils/spotify";
 import { useSpotify } from "./hooks/useSpotify";
@@ -23,7 +25,7 @@ const COUNTDOWN_SECONDS = 10;
 
 const bgColor: Record<Phase, string> = {
   workout: "bg-emerald-600",
-  rest: "bg-amber-500",
+  rest: "bg-red-600",
   section_rest: "bg-blue-600",
   idle: "bg-slate-800",
 };
@@ -255,6 +257,31 @@ function App() {
   const totalRoundsInSection = currentSection?.rounds.length ?? 0;
   const headerName = state.config.name || "WORKOUT TIMER";
 
+  // Compute current phase duration so the ProgressRing can render fill %
+  let phaseDuration = currentRound?.workoutSeconds ?? 0;
+  if (state.phase === "rest") phaseDuration = currentRound?.restSeconds ?? 0;
+  else if (state.phase === "section_rest")
+    phaseDuration = currentSection?.restBetweenSections ?? 0;
+  const progress =
+    phaseDuration > 0
+      ? Math.max(0, Math.min(1, 1 - state.secondsRemaining / phaseDuration))
+      : 0;
+
+  // Active arc color per phase
+  const ringColorClass: Record<Phase, string> = {
+    workout: "stroke-emerald-200",
+    rest: "stroke-red-200",
+    section_rest: "stroke-blue-200",
+    idle: "stroke-white/40",
+  };
+
+  // Pulse digits in the final 5 seconds of work
+  const shouldPulse =
+    state.phase === "workout" &&
+    state.isRunning &&
+    state.secondsRemaining <= 5 &&
+    state.secondsRemaining > 0;
+
   return (
     <div
       className={`flex min-h-dvh flex-col items-center justify-center gap-6 px-4 text-white transition-colors duration-500 ${bgColor[state.phase]}`}
@@ -290,10 +317,18 @@ function App() {
         <p className="text-2xl font-bold sm:text-3xl">{currentRound.label}</p>
       )}
 
-      <TimerDisplay
-        secondsRemaining={state.secondsRemaining}
-        phase={state.phase}
-      />
+      <ProgressRing
+        progress={progress}
+        size={Math.min(360, Math.max(280, 320))}
+        strokeWidth={12}
+        activeColorClass={ringColorClass[state.phase]}
+      >
+        <TimerDisplay
+          secondsRemaining={state.secondsRemaining}
+          phase={state.phase}
+          pulse={shouldPulse}
+        />
+      </ProgressRing>
 
       {!isIdle && (
         <RepetitionCounter
@@ -301,6 +336,8 @@ function App() {
           totalRounds={totalRoundsInSection}
         />
       )}
+
+      {!isIdle && <NextUpBar state={state} />}
 
       <TimerControls
         isRunning={state.isRunning}
