@@ -178,6 +178,10 @@ function App() {
     }, 0);
   }
 
+  function handleQuickStartWorkout(saved: SavedWorkout) {
+    handleStartFromEditor(saved.config);
+  }
+
   function handleResetToLibrary() {
     reset();
     setView("library");
@@ -232,6 +236,7 @@ function App() {
       <WorkoutLibrary
         workouts={workouts}
         onSelect={handleSelectWorkout}
+        onQuickStart={handleQuickStartWorkout}
         onNew={handleNewWorkout}
         onDelete={remove}
       />
