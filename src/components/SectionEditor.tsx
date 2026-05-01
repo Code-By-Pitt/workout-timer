@@ -3,12 +3,26 @@ import { TRANSITION_SOUNDS, createDefaultRound } from "../types/timer";
 import { RoundEditor } from "./RoundEditor";
 import { DurationStepper } from "./DurationStepper";
 import { playSound } from "../utils/playSound";
+import { formatTime } from "../utils/formatTime";
 
 interface SectionEditorProps {
   index: number;
   section: Section;
   onChange: (section: Section) => void;
   onRemove: (() => void) | null;
+  /** When true, render only the collapsed header */
+  collapsed?: boolean;
+  /** Tap header to toggle. If null, no toggle is shown (single-section workouts). */
+  onToggleCollapse?: (() => void) | null;
+}
+
+function sectionSummary(section: Section): string {
+  const rounds = section.rounds.length;
+  const totalSeconds = section.rounds.reduce(
+    (sum, r) => sum + r.workoutSeconds + r.restSeconds,
+    0
+  );
+  return `${rounds} round${rounds !== 1 ? "s" : ""} · ${formatTime(totalSeconds)}`;
 }
 
 export function SectionEditor({
@@ -16,6 +30,8 @@ export function SectionEditor({
   section,
   onChange,
   onRemove,
+  collapsed = false,
+  onToggleCollapse = null,
 }: SectionEditorProps) {
   function updateRound(roundIndex: number, round: Round) {
     const rounds = [...section.rounds];
@@ -28,7 +44,6 @@ export function SectionEditor({
   }
 
   function addRound() {
-    // Copy work/rest from the last round as a sensible default
     const last = section.rounds[section.rounds.length - 1];
     const newRound = last
       ? createDefaultRound(last.workoutSeconds, last.restSeconds)
@@ -52,21 +67,62 @@ export function SectionEditor({
     playSound(`/sounds/${s}.wav`);
   }
 
-  return (
-    <div className="flex flex-col gap-4 rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
-      <div className="flex items-center justify-between">
-        <h3 className="text-sm font-bold uppercase tracking-wider text-white/60">
+  // Header — always shown
+  const Header = (
+    <div className="flex items-center justify-between gap-2">
+      {onToggleCollapse ? (
+        <button
+          onClick={onToggleCollapse}
+          className="flex flex-1 items-center gap-2 text-left"
+          aria-expanded={!collapsed}
+        >
+          <span
+            className="inline-block text-xs text-white/50 transition-transform"
+            style={{ transform: collapsed ? "rotate(-90deg)" : "rotate(0deg)" }}
+          >
+            ▼
+          </span>
+          <h3 className="flex flex-1 flex-col text-sm font-bold uppercase tracking-wider text-white/60">
+            <span>
+              Section {index + 1}
+              {section.name && (
+                <span className="ml-2 normal-case tracking-normal text-white/80">
+                  {section.name}
+                </span>
+              )}
+            </span>
+            {collapsed && (
+              <span className="text-[10px] font-normal normal-case tracking-normal text-white/40">
+                {sectionSummary(section)}
+              </span>
+            )}
+          </h3>
+        </button>
+      ) : (
+        <h3 className="flex-1 text-sm font-bold uppercase tracking-wider text-white/60">
           Section {index + 1}
         </h3>
-        {onRemove && (
-          <button
-            onClick={onRemove}
-            className="text-xs text-white/40 hover:text-white/70"
-          >
-            Remove section
-          </button>
-        )}
-      </div>
+      )}
+      {onRemove && (
+        <button
+          onClick={onRemove}
+          className="text-xs text-white/40 hover:text-white/70"
+        >
+          Remove
+        </button>
+      )}
+    </div>
+  );
+
+  if (collapsed) {
+    return (
+      <div className="rounded-2xl bg-white/10 p-4 backdrop-blur-sm">{Header}</div>
+    );
+  }
+
+  return (
+    <div className="flex flex-col gap-4 rounded-2xl bg-white/10 p-4 backdrop-blur-sm">
+      {Header}
 
       {/* Section Name */}
       <input
