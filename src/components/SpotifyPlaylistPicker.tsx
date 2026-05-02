@@ -1,5 +1,9 @@
 import { useEffect, useMemo, useState } from "react";
-import { getPlaylists, type SpotifyPlaylist } from "../utils/spotifyApi";
+import {
+  getPlaylists,
+  getPlaylistTrackCount,
+  type SpotifyPlaylist,
+} from "../utils/spotifyApi";
 import type { SpotifyPlaylistRef } from "../types/timer";
 
 interface SpotifyPlaylistPickerProps {
@@ -35,7 +39,7 @@ export function SpotifyPlaylistPicker({
       uri: p.uri,
       name: p.name,
       imageUrl: p.images?.[0]?.url,
-      trackCount: p.tracks?.total,
+      trackCount: getPlaylistTrackCount(p),
     };
     onSelect(ref);
   }
@@ -104,7 +108,7 @@ export function SpotifyPlaylistPicker({
                 <div className="flex min-w-0 flex-1 flex-col">
                   <span className="truncate text-sm font-medium">{p.name}</span>
                   <span className="text-xs text-white/50">
-                    {p.tracks?.total ?? 0} tracks
+                    {getPlaylistTrackCount(p)} tracks
                   </span>
                 </div>
               </button>
