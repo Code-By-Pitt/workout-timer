@@ -125,41 +125,28 @@ function App() {
     return Boolean(config.spotifyPlaylist) && loggedIn && isPremium;
   }
 
-  async function handleStart() {
+  function handleStart() {
     prewarmAudio();
     if (state.phase === "idle") {
-      // First start: begin playback from the picked playlist
-      await openSpotifyForConfig(state.config);
+      // Fire Spotify in parallel — don't block the timer
+      openSpotifyForConfig(state.config).catch(() => {});
     } else if (isSpotifyControlled(state.config)) {
-      // Resume existing playback without restarting the playlist
-      try {
-        await spotifyApi.resumePlayback();
-      } catch {
-        // ignore — don't block timer
-      }
+      spotifyApi.resumePlayback().catch(() => {});
     }
     start();
   }
 
-  async function handlePause() {
+  function handlePause() {
     pause();
     if (isSpotifyControlled(state.config)) {
-      try {
-        await spotifyApi.pausePlayback();
-      } catch {
-        // ignore
-      }
+      spotifyApi.pausePlayback().catch(() => {});
     }
   }
 
-  async function handleReset() {
+  function handleReset() {
     reset();
     if (isSpotifyControlled(state.config)) {
-      try {
-        await spotifyApi.pausePlayback();
-      } catch {
-        // ignore
-      }
+      spotifyApi.pausePlayback().catch(() => {});
     }
   }
 
@@ -187,9 +174,10 @@ function App() {
     setConfig(config);
     setView("timer");
     // start() needs to fire after setConfig processes
-    setTimeout(async () => {
+    setTimeout(() => {
       prewarmAudio();
-      await openSpotifyForConfig(config);
+      // Fire Spotify in parallel — don't block timer start
+      openSpotifyForConfig(config).catch(() => {});
       start();
     }, 0);
   }
