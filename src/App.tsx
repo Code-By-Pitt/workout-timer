@@ -37,6 +37,9 @@ const bgColor: Record<Phase, string> = {
 type View = "library" | "editor" | "timer";
 
 function App() {
+  // Hooks must run unconditionally on every render — keep them at the top,
+  // before the auth gate and view branches below (Rules of Hooks).
+  const viewport = useViewport();
   const { user, loading: authLoading } = useAuth();
   const {
     state,
@@ -307,8 +310,7 @@ function App() {
   // Overall workout progress (elapsed + remaining)
   const progressInWorkout = computeWorkoutProgress(state);
 
-  // Responsive ring size — fit the viewport differently in portrait vs landscape
-  const viewport = useViewport();
+  // Ring size derived from the viewport snapshot taken at the top of App
   const ringSize = viewport.isLandscape
     ? Math.min(viewport.height * 0.78, viewport.width * 0.42)
     : Math.min(360, viewport.width * 0.78);
