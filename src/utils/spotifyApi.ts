@@ -104,10 +104,13 @@ export async function searchPublicPlaylists(
   query: string
 ): Promise<SpotifyPlaylist[]> {
   if (!query.trim()) return [];
+  // Spotify silently capped search `limit` at 10 for apps without Extended
+  // Quota. Anything > 10 returns "Invalid limit" 400. Confirmed via live test
+  // 2026-05-02.
   const params = new URLSearchParams({
     q: query.trim(),
     type: "playlist",
-    limit: "20",
+    limit: "10",
   });
   const res = await apiFetch(`/search?${params.toString()}`);
   const data: {
