@@ -105,6 +105,15 @@ export function WorkoutLibrary({
           </div>
         ))}
       </div>
+
+      <footer className="mt-8 w-full max-w-md text-center">
+        <a
+          href="/privacy"
+          className="text-xs text-white/30 underline hover:text-white/60"
+        >
+          Privacy Policy
+        </a>
+      </footer>
     </div>
   );
 }
