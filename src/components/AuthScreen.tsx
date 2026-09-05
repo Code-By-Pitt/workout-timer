@@ -143,6 +143,15 @@ export function AuthScreen() {
             {isSignUp ? "Sign In" : "Sign Up"}
           </button>
         </p>
+
+        <p className="text-center">
+          <a
+            href="/privacy"
+            className="text-xs text-white/40 underline hover:text-white/70"
+          >
+            Privacy Policy
+          </a>
+        </p>
       </div>
     </div>
   );
